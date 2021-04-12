@@ -1,8 +1,12 @@
 import React, { Component } from 'react';
-import {Form, Input, Button, Icon} from 'antd'
+import {Form, Input, Button, Icon, message} from 'antd'
+import {Redirect} from 'react-router-dom'
 
 import './login.less'
 import logo from '../../assets/images/logo.png'
+import {reqLogin} from '../../api/index'
+import memoryUtils from '../../utils/memoryUtils'
+import storageUtils from '../../utils/storageUtils'
 
 const Item = Form.Item
 /* 登录的路由组件 */
@@ -13,13 +17,62 @@ class Login extends Component {
     event.preventDefault()
 
     // 对所有表单字段进行检验
-    const form = this.props.form
+    // const form = this.props.form
     // 获取表单项的输入数据
     // 该方法得到的是一个对象，键值是getFieldDecorator里面的标识名
-    const values = form.getFieldsValue()
-    console.log(values);
+    // const values = form.getFieldsValue()
+    // console.log(values);
+    this.props.form.validateFields(async (err, values) => {
+      // 检验成功
+      if(!err) {
+        const {username, password} = values
+        const result = await reqLogin(username, password)
+        if(result.status===0) {
+          message.success('登录成功')
+          // 保存user
+          const user = result.data
+          // 保存在内存中
+          memoryUtils.user = user
+          // 保存在localStorage中
+          storageUtils.saveUser(user)
+          // 跳转到后台管理界面
+          this.props.history.replace('/')
+        } else {
+          message.error(result.msg)
+        }
+      } else {
+        console.log('检验失败');
+      }
+    })
   }
+
+  /* 对密码进行自定义验证 
+  用户名/密码的的合法性要求
+    1). 必须输入
+    2). 必须大于等于4位
+    3). 必须小于等于12位
+    4). 必须是英文、数字或下划线组成
+  */
+  validatePwd = (rule, value, callback) => {
+    if(!value) {
+      callback('密码不能为空')
+    } else if(value.length<4 || value.length>12) {
+      callback('密码长度必须在4-12位之间')
+    } else if(!/^[a-zA-Z0-9_]+$/.test(value)) {
+      callback('密码必须由英文、数字或下划线组成')
+    } else {
+      // 验证通过
+      callback()
+    }
+  }
+
+
   render() {
+    // 如果用户已经登陆了，直接跳转到后台管理界面
+    const user = memoryUtils.user
+    if(user && user._id) {
+      return <Redirect to='/'/>
+    }
     // 得到form对象，与Form组件标签不是一回事
     const form = this.props.form
     const {getFieldDecorator} = form
@@ -57,10 +110,14 @@ class Login extends Component {
             <Item>
               {
                 getFieldDecorator('password', {
-                  // 
+                  // 密码的自定义验证
+                  rules: [
+                    {validator: this.validatePwd}
+                  ]
                 })(
                   <Input
                     prefix={<Icon type='lock' style={{ color: 'rgba(0,0,0,.25)' }} />}
+                    type="password"
                     placeholder="密码"
                   />
                 )
