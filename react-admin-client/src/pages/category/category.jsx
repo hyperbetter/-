@@ -3,7 +3,9 @@ import React, { Component } from 'react';
 import {Button, Icon, Card, Table, message, Modal} from 'antd'
 
 import LinkButton from '../../components/link-button'
-import {reqCategorys} from '../../api'
+import {reqCategorys, reqUpdateCategory, reqAddCategory} from '../../api'
+import AddForm from './add-form'
+import UpdateForm from './update-form'
 
 class Category extends Component {
   state = {
@@ -35,7 +37,8 @@ class Category extends Component {
         // 返回需要显示的界面标签
         render: (category) => ( 
           <span>
-            <LinkButton>修改分类</LinkButton>
+            <LinkButton onClick={() => this.showUpdate(category)}>修改分类</LinkButton>
+            {/*如何向事件回调函数传递参数: 先定义一个匿名函数, 在函数调用处理的函数并传入数据*/}
             {this.state.parentId==='0' ? <LinkButton onClick={() => this.showSubCategorys(category)}>查看分类</LinkButton> : null}
           </span>
         )
@@ -43,14 +46,18 @@ class Category extends Component {
     ]
   }
 
-  // 异步获取一/二级分类列表
-  getCategorys = async () => {
+  /*
+  异步获取一级/二级分类列表显示
+  parentId: 如果没有指定，则根据状态中的parentId请求；如果指定了，则根据指定的请求
+   */
+  getCategorys = async (parentId) => {
     // 在发送请求前，显示loading加载状态
     this.setState({loading: true})
-    const {parentId} = this.state
+    parentId = parentId || this.state.parentId
     const result = await reqCategorys(parentId)
     // 在请求完成后，隐藏loading
     this.setState({loading: false})
+
     if(result.status === 0) {
       // 取出分类数组（可能是一级的，也可能是二级的）
       const categorys = result.data
@@ -85,6 +92,74 @@ class Category extends Component {
       subCategorys: []
     })
   }
+
+  // 响应点击取消：隐藏确定框
+  handleCancel = () => {
+    // 清除输入数据
+    this.form.resetFields()
+    // 隐藏确认框
+    this.setState({showStatus: 0})
+  }
+
+  // 显示添加的确认框
+  showAdd = () => {
+    this.setState({showStatus: 1})
+  }
+
+  // 添加分类
+  addCategory = () => {
+    this.form.validateFields(async (err, values) => {
+      if(!err) {
+        // 隐藏确认框
+        this.setState({showStatus: 0})
+        // 收集数据
+        const {parentId, categoryName} = values
+        // 清除数据
+        this.form.resetFields()
+        const result = await reqAddCategory(categoryName, parentId)
+        if(result.status===0) {
+          // 添加的分类就是当前分类列表下的分类
+          if(parentId===this.state.parentId) {
+            // 重新获取当前分类列表显示
+            this.getCategorys()
+          } else if(parentId==='0') { // 在二级分类列表下添加一级分类, 重新获取一级分类列表, 但不需要显示一级列表
+            this.getCategorys('0')
+          }
+        }
+      }
+    })
+  }
+
+  // 显示修改的确认框
+  showUpdate = (category) => {
+    // 保存分类对象
+    this.category = category
+    // 更新状态
+    this.setState({showStatus: 2})
+  }
+
+  // 更新分类
+  updateCategory = () => {
+    // 进行表单验证，只有通过了才处理
+    this.form.validateFields(async (err, values) => {
+      if(!err) {
+        // 隐藏确定框(form)
+        this.setState({showStatus: 0})
+        // 准备数据
+        const categoryId = this.category._id
+        const {categoryName} = values
+        // 清除输入数据（不清除数据的话，数据会被保存下来，这样会看不到初始值initialValue）
+        this.form.resetFields()
+        // 发送请求更新分类
+        const result = await reqUpdateCategory({categoryId, categoryName})
+        if(result.status===0) {
+          // 重新显示列表
+          this.getCategorys()
+        }
+      }
+    })
+  }
+
   // 为第一次render准备数据
   componentWillMount () {
     this.initColumns()
@@ -98,18 +173,24 @@ class Category extends Component {
 
   render() {
     // 获取状态数据
-    const {categorys, subCategorys, loading, parentId, parentName} = this.state
+    const {categorys, subCategorys, loading, parentId, parentName, showStatus} = this.state
+    /* 
+      读取指定的分类
+      render第一次渲染的时候，showUpdate()还没有执行，category会是undefined
+      所以这时候可以先为它指定一个空对象，防止报错 
+    */
+    const category = this.category || {}
     // Card的左侧标题
     const title = parentId==='0' ? '一级分类列表' :(
       <span>
         <LinkButton onClick={this.showCategorys}>一级分类列表</LinkButton>
-        <Icon type='arrow-right' style={{marginRight: 5}}/>
+        <Icon type='right' style={{marginRight: 5}}/>
         <span>{parentName}</span>
       </span>
     )
     // Card的右侧按钮
     const extra = (
-      <Button type='primary'>
+      <Button type='primary' onClick={this.showAdd}>
         <Icon type='plus'/>
         添加
       </Button>
@@ -125,6 +206,29 @@ class Category extends Component {
           columns={this.columns}
           pagination={{defaultPageSize: 5, showQuickJumper: true}}
         />
+        <Modal
+          title='添加分类'
+          visible={showStatus===1}
+          onOk={this.addCategory}
+          onCancel={this.handleCancel}
+        >
+          <AddForm
+            categorys={categorys}
+            parentId={parentId}
+            setForm={(form) => {this.form = form}}
+          />
+        </Modal>
+        <Modal
+          title='更新分类'
+          visible={showStatus===2}
+          onOk={this.updateCategory}
+          onCancel={this.handleCancel}
+        >
+          <UpdateForm
+            categoryName={category.name}
+            setForm={(form) => {this.form = form}}
+          />
+        </Modal>
       </Card>
     );
   }
