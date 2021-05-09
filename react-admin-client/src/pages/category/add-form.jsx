@@ -31,6 +31,7 @@ class AddForm extends Component {
     return (
       <Form>
         <Item>
+          {/* parentId、categoryName就是category.jsx中validateFields的value1的值 */}
           {
             getFieldDecorator('parentId', {
               initialValue: parentId
@@ -38,14 +39,12 @@ class AddForm extends Component {
               <Select>
                 <Option value='0'>一级分类</Option>
                 {
-                  categorys.map(c => <Option value={c._id} key={c._id}>{c.name}</Option>)
+                  categorys.map(c => <Option value={c._id}>{c.name}</Option>)
                 }
               </Select>
             )
           }
-
         </Item>
-
         <Item>
           {
             getFieldDecorator('categoryName', {

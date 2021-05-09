@@ -42,7 +42,7 @@ class Header extends Component {
         title = item.title
       } else if(item.children) {
         // 在所有子item中查找匹配的
-        const cItem = item.children.find(cItem => cItem.key===path)
+        const cItem = item.children.find(cItem => path.indexOf(cItem.key)===0)
         // 如果有值才说明有匹配的
         if(cItem) {
           // 取出它的title
@@ -53,7 +53,7 @@ class Header extends Component {
     return title
   }
   
-  logOut = () => {
+  logout = () => {
     // 显示确认框
     Modal.confirm({
       content: '确定退出么？',
@@ -93,7 +93,7 @@ class Header extends Component {
       <div className='header'>
         <div className="header-top">
           <span>欢迎，{username}</span>
-          <LinkButton onClick={this.logOut}>退出</LinkButton>
+          <LinkButton onClick={this.logout}>退出</LinkButton>
         </div>
         <div className="header-bottom">
           <div className="header-bottom-left">{title}</div>
