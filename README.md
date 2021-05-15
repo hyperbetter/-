@@ -3,13 +3,13 @@
 ## 环境要求
 建议yarn 1.22.10+
 ## 安装
-$ git init
-$ git clone https://github.com/hyperbetter/-.git
-$ npm install
+* $ git init
+* $ git clone https://github.com/hyperbetter/-.git
+* $ npm install
 或者
-$ git init
-$ git clone git@github.com:hyperbetter/-.git
-$ npm install
+* $ git init
+* $ git clone git@github.com:hyperbetter/-.git
+* $ npm install
 ## 运行
 $ yarn start
 服务器默认端口是5000，客户端默认端口是3000
